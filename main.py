@@ -10,6 +10,7 @@ ID = "1697906576"
 def job_final_complet():
     aujourdhui = datetime.now().strftime("%Y-%m-%d")
     leagues = ['soccer_epl', 'soccer_spain_la_liga', 'soccer_italy_serie_a', 'soccer_germany_bundesliga', 'soccer_france_ligue_1']
+    selection_combine = []
     
     for league in leagues:
         url = f"https://api.the-odds-api.com/v4/sports/{league}/odds/?apiKey={API_KEY}&regions=eu&markets=h2h,totals"
@@ -18,30 +19,27 @@ def job_final_complet():
                 matchs = json.loads(response.read().decode())
                 for m in matchs:
                     if aujourdhui in m['commence_time']:
-                        home = m['home_team']
-                        away = m['away_team']
-                        
+                        home, away = m['home_team'], m['away_team']
                         bk = m['bookmakers'][0]['markets']
                         h2h = bk[0]['outcomes']
                         cote_h = next(o['price'] for o in h2h if o['name'] == home)
-                        cote_a = next(o['price'] for o in h2h if o['name'] == away)
                         cote_n = next(o['price'] for o in h2h if o['name'] == 'Draw')
 
-                        # CALCULS DES INDICES
-                        prob_v = (1 / cote_h) * 100
-                        prob_n = (1 / cote_n) * 100
-                        
+                        prob_v, prob_n = (1 / cote_h) * 100, (1 / cote_n) * 100
                         fiabilite_directe = int(prob_v)
                         fiabilite_securisee = int(prob_v + (prob_n * 0.8))
                         if fiabilite_securisee > 99: fiabilite_securisee = 99
 
-                        # SEUIL AJUSTÉ À 75% : Pour avoir plus de matchs (comme Tottenham ou Villa)
                         if fiabilite_securisee >= 75:
-                            
-                            msg_buts = "Normal (1-2 buts)"
+                            # Analyse simplifiée des buts
+                            type_match = "Match fermé (peu de buts)"
                             if len(bk) > 1:
                                 over_25 = next((o['price'] for o in bk[1]['outcomes'] if o['name'] == 'Over'), 2.0)
-                                if over_25 < 1.80: msg_buts = "Élevé (+2.5 buts)"
+                                if over_25 < 1.80: type_match = "Spectacle attendu (+2.5 buts)"
+
+                            # Stockage pour le combiné
+                            if fiabilite_securisee >= 88:
+                                selection_combine.append(f"{home} (V ou N)")
 
                             msg = (
                                 f"🛰️ **SCANNER DATA PRO : {home.upper()}**\n"
@@ -54,7 +52,7 @@ def job_final_complet():
                                 f"• 🛡️ **Sécurité (V ou N)** : {fiabilite_securisee}%\n"
                                 f"━━━━━━━━━━━━━━━━━━\n"
                                 f"📊 **ANALYSE DES RATIOS** :\n"
-                                f"• ⚽ **Ratio Buts/Match** : {msg_buts}\n"
+                                f"• ⚽ **Style de jeu** : {type_match}\n"
                                 f"• 🛡️ **Clean Sheet** : {'Possible' if fiabilite_directe > 65 else 'Risqué'}\n"
                                 f"━━━━━━━━━━━━━━━━━━\n"
                                 f"🎯 **PRONOSTIC FINAL** :\n"
@@ -63,10 +61,16 @@ def job_final_complet():
                                 f"━━━━━━━━━━━━━━━━━━\n"
                                 f"💰 **Mise** : {'2%' if fiabilite_directe > 70 else '1%'} du capital"
                             )
-                            
                             api_url = f"https://api.telegram.org/bot{TOKEN}/sendMessage?chat_id={ID}&text={urllib.parse.quote(msg)}&parse_mode=Markdown"
                             urllib.request.urlopen(api_url)
         except: continue
+
+    # ENVOI DU COMBINÉ SAFE
+    if len(selection_combine) >= 2:
+        ticket = " 🔥 **COMBINÉ SAFE DU JOUR (90%)** 🔥\n\n"
+        ticket += " ✅ " + " + ".join(selection_combine[:2])
+        ticket += "\n\n🎯 **Conseil** : Jouer les deux en 'Double Chance'"
+        urllib.request.urlopen(f"https://api.telegram.org/bot{TOKEN}/sendMessage?chat_id={ID}&text={urllib.parse.quote(ticket)}&parse_mode=Markdown")
 
 if __name__ == "__main__":
     job_final_complet()
