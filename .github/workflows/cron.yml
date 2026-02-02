@@ -1,10 +1,11 @@
-name: Bot_Foot_Auto
+name: Bot Safe Auto
 on:
   schedule:
-    - cron: '5 0 * * *' # Lance à 00h05 chaque jour
+    - cron: '0 8 * * *'  # 9h00 du matin (Analyse de la journée)
+    - cron: '0 12 * * *' # 13h00 (Dernière vérification avant les matchs)
   workflow_dispatch:
 jobs:
-  analyse:
+  run:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
