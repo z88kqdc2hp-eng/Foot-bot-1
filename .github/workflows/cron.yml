@@ -1,17 +1,14 @@
-name: Bot Safe Automatique
+name: Bot Safe Auto
 on:
   schedule:
-    - cron: '0 8 * * *'  # Se lance à 9h00 (Heure FR)
-  workflow_dispatch:      # Le bouton pour lancer manuellement
+    - cron: '0 8 * * *'  # 9h00 (Heure FR)
+  workflow_dispatch:      # Bouton manuel
 jobs:
-  run-bot:
+  run:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Python
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
         with:
           python-version: '3.9'
-      - name: Execution
-        run: python main.py
+      - run: python main.py
